@@ -1,0 +1,451 @@
+<!-- Local rules -->
+
+<!-- Modify it at your will. -->
+<!-- Copyright (C) 2015, Wazuh Inc. -->
+
+
+<group name="audit,">
+  <!-- Critical commands - Level 12 (High) -->
+  <rule id="100210" level="12">
+    <if_sid>80792</if_sid>
+    <list field="audit.command" lookup="match_key_value" check_value="red">etc/lists/dangerous-commands</list>
+    <description>Audit: Critical Command Executed: $(audit.exe) by user $(audit.auid)</description>
+    <group>audit_command,pci_dss_10.2.7,</group>
+  </rule>
+
+  <!-- Warning commands - Level 8 (Medium) -->
+  <rule id="100211" level="8">
+    <if_sid>80792</if_sid>
+    <list field="audit.command" lookup="match_key_value" check_value="orange">etc/lists/dangerous-commands</list>
+    <description>Audit: Suspicious Command Executed: $(audit.exe) by user $(audit.auid)</description>
+    <group>audit_command,</group>
+  </rule>
+
+  <!-- Info commands - Level 5 (Low) -->
+  <rule id="100212" level="5">
+    <if_sid>80792</if_sid>
+    <list field="audit.command" lookup="match_key_value" check_value="yellow">etc/lists/dangerous-commands</list>
+    <description>Audit: Notable Command Executed: $(audit.exe) by user $(audit.auid)</description>
+    <group>audit_command,</group>
+  </rule>
+
+
+</group>
+
+
+<group name="keylogger,attack,credential_theft,">
+
+  <!-- Core: Keyboard device access -->
+  <rule id="100400" level="15">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">keyboard_read</field>
+    <description>CRITICAL KEYLOGGER: Keyboard device accessed - $(audit.exe) by user $(audit.auid)</description>
+    <mitre>
+      <id>T1056.001</id>
+    </mitre>
+    <group>keylogger,pci_dss_10.6.1,gdpr_IV_35.7.d,hipaa_164.312.b,</group>
+  </rule>
+
+  <rule id="100401" level="15">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">keyboard_access</field>
+    <description>CRITICAL KEYLOGGER: Process opened keyboard device - $(audit.exe) by $(audit.auid)</description>
+    <group>keylogger,pci_dss_10.6.1,</group>
+  </rule>
+
+  <!-- Active keylogging (frequency-based HIGH CONFIDENCE) -->
+  <rule id="100402" level="15" frequency="10" timeframe="60">
+    <if_matched_sid>100400</if_matched_sid>
+    <description>CRITICAL KEYLOGGER: ACTIVE KEYLOGGING - 10+ reads in 60 seconds by $(audit.auid)</description>
+    <group>keylogger,active_attack,high_confidence,</group>
+  </rule>
+
+  <rule id="100403" level="15" frequency="50" timeframe="300">
+    <if_matched_sid>100400</if_matched_sid>
+    <description>CRITICAL KEYLOGGER: PERSISTENT KEYLOGGING - 50+ reads in 5 minutes by $(audit.auid)</description>
+    <group>keylogger,active_attack,persistent_threat,</group>
+  </rule>
+
+  <!-- Known keylogger process names -->
+  <rule id="100500" level="15">
+    <if_sid>80700</if_sid>
+    <match>logkeys|pykeylogger|pyxhook|keysniffer|THC-vlogger|lkl|KnowIt|blackbox</match>
+    <description>CRITICAL KEYLOGGER: Known keylogger process detected - $(audit.exe)</description>
+    <group>keylogger,malware,</group>
+  </rule>
+
+  <!-- Python keylogger libraries -->
+  <rule id="100501" level="15">
+    <if_sid>80700</if_sid>
+    <field name="audit.exe">python|python3</field>
+    <match>pynput|keyboard|evdev|pyxhook|pyHook</match>
+    <description>CRITICAL KEYLOGGER: Python keylogger library detected - $(audit.exe)</description>
+    <group>keylogger,python_malware,</group>
+  </rule>
+
+  <!-- Input monitoring tools -->
+  <rule id="100502" level="10">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">input_tool</field>
+    <description>WARNING: Input monitoring tool executed - $(audit.exe) by $(audit.auid)</description>
+    <group>keylogger,input_monitoring,</group>
+  </rule>
+
+  <!-- Keylog file creation -->
+  <rule id="100503" level="15">
+    <if_sid>554</if_sid>
+    <match>/tmp/key|/tmp/log|/var/tmp/key|/dev/shm/key|keylog</match>
+    <description>CRITICAL KEYLOGGER: Suspicious keylog file created - $(file)</description>
+    <group>keylogger,suspicious_file,</group>
+  </rule>
+
+  <!-- X11 access -->
+  <rule id="100504" level="12">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">x11_access</field>
+    <description>ALERT: X11 authorization accessed by $(audit.exe) - possible keylogger</description>
+    <group>keylogger,x11_abuse,</group>
+  </rule>
+
+  <!-- TTY access -->
+  <rule id="100505" level="12">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">tty_access</field>
+    <description>ALERT: TTY device accessed by $(audit.exe) - possible keylogger</description>
+    <group>keylogger,tty_monitoring,</group>
+  </rule>
+
+  <!-- Input enumeration -->
+  <rule id="100508" level="8">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">input_enum</field>
+    <description>WARNING: Input device enumeration - $(audit.exe)</description>
+    <group>keylogger,reconnaissance,</group>
+  </rule>
+
+  <!-- Network exfiltration -->
+  <rule id="100510" level="15">
+    <if_sid>80700</if_sid>
+    <match>dev/input.*curl|dev/input.*wget|dev/input.*nc|dev/input.*netcat</match>
+    <description>CRITICAL KEYLOGGER: Keystroke data exfiltration detected!</description>
+    <group>keylogger,exfiltration,data_theft,</group>
+  </rule>
+
+  <!-- Keylogger compilation -->
+  <rule id="100511" level="12">
+    <if_sid>80700</if_sid>
+    <match>gcc.*keylog|make.*keylog|cc.*evdev|gcc.*input</match>
+    <description>ALERT: Possible keylogger compilation - $(audit.exe)</description>
+    <group>keylogger,malware_development,</group>
+  </rule>
+
+  <!-- Persistence detection -->
+  <rule id="100512" level="12">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">autostart_change</field>
+    <description>ALERT: Autostart modified - possible keylogger persistence</description>
+    <group>keylogger,persistence,</group>
+  </rule>
+
+  <rule id="100513" level="10">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">bashrc_change</field>
+    <description>WARNING: Shell profile modified - check for malicious commands</description>
+    <group>keylogger,persistence,</group>
+  </rule>
+
+  <!-- Browser data access -->
+  <rule id="100520" level="12">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">browser_data_access</field>
+    <description>ALERT: Browser data accessed by $(audit.exe) - possible credential theft</description>
+    <group>credential_theft,browser_theft,</group>
+  </rule>
+
+  <!-- SSH key theft -->
+  <rule id="100521" level="15">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">ssh_key_access</field>
+    <description>CRITICAL: SSH private key accessed by $(audit.exe) - user $(audit.auid)</description>
+    <group>credential_theft,ssh_key_theft,pci_dss_10.2.7,</group>
+  </rule>
+
+  <!-- Clipboard hijacking -->
+  <rule id="100522" level="10">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">clipboard_tool</field>
+    <description>WARNING: Clipboard tool executed - $(audit.exe)</description>
+    <group>clipboard_hijack,</group>
+  </rule>
+
+  <!-- Webcam access -->
+  <rule id="100523" level="12">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">webcam_access</field>
+    <description>ALERT: Webcam device accessed by $(audit.exe) - user $(audit.auid)</description>
+    <group>privacy_violation,surveillance,</group>
+  </rule>
+
+  <!-- Password file access -->
+  <rule id="100524" level="15">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">shadow_read</field>
+    <description>CRITICAL: Password file accessed by $(audit.exe) - user $(audit.auid)</description>
+    <group>credential_access,password_theft,</group>
+  </rule>
+
+  <!-- Persistence via cron -->
+  <rule id="100525" level="12">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">cron_changes</field>
+    <description>ALERT: Cron job modified - possible persistence mechanism</description>
+    <group>persistence,backdoor,</group>
+  </rule>
+
+  <!-- Persistence via systemd -->
+  <rule id="100526" level="12">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">systemd_service</field>
+    <description>ALERT: Systemd service modified - possible persistence</description>
+    <group>persistence,backdoor,</group>
+  </rule>
+
+</group>
+
+
+
+
+
+<group name="file-access-watch,">
+
+  <!-- Wazuh credential file tampering -->
+    <rule id="100650" level="15">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">wazuh_creds_change</field>
+    <description>CRITICAL: Wazuh credential file modified: $(audit.file.name) by $(audit.exe)</description>
+    <group>integrity_failure,credential_access,</group>
+  </rule>
+
+  <!-- Wazuh config tampering -->
+  <rule id="100651" level="15">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">wazuh_config_change</field>
+    <description>CRITICAL: Wazuh config modified: $(audit.file.name) by $(audit.exe)</description>
+    <group>integrity_failure,</group>
+  </rule>
+
+
+
+  <!-- Audit config tampering -->
+  <rule id="100652" level="15">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">audit_config_change</field>
+    <description>CRITICAL: Audit config tampered: $(audit.file.name) by $(audit.exe)</description>
+    <group>integrity_failure,</group>
+  </rule>
+
+
+  <!-- Sudoers modification -->
+  <rule id="100653" level="15">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">sudoers_change</field>
+    <description>CRITICAL: Sudoers file modified: $(audit.file.name) by $(audit.exe)</description>
+    <group>privilege_escalation,</group>
+  </rule>
+
+  <!-- Hosts file modification -->
+   <rule id="100654" level="12">
+    <if_sid>80700</if_sid>
+    <field name="audit.key">hosts_change</field>
+    <description>Hosts file modified by $(audit.exe)</description>
+    <group>configuration_changed,</group>
+  </rule>
+
+
+</group>
+
+
+
+
+<group name="exceptions,">
+
+  <!-- PAM password checking helper -->
+  <rule id="100600" level="0">
+    <if_sid>100524</if_sid>
+    <field name="audit.exe">/usr/bin/unix_chkpwd</field>
+    <description>Ignore shadow reads by unix_chkpwd (PAM authentication)</description>
+  </rule>
+
+
+  <rule id="100601" level="0">
+    <if_sid>100654</if_sid>
+    <field name="audit.exe">/opt/brave-bin/brave</field>
+    <description>Suppress: Brave browser hosts file read</description>
+  </rule>
+
+  <rule id="100602" level="0">
+    <if_sid>100654</if_sid>
+    <field name="audit.exe">/usr/lib/firefox/firefox</field>
+    <description>Suppress: Firefox hosts file read</description>
+  </rule>
+
+
+  <rule id="100604" level="0">
+    <if_sid>100650</if_sid>
+    <field name="audit.exe">/usr/share/wazuh-dashboard/node/bin/node</field>
+    <description>Suppress: Wazuh dashboard writing its own config</description>
+  </rule>
+
+  <rule id="100605" level="0">
+    <if_sid>100654</if_sid>
+    <field name="audit.exe">/usr/bin/vmnet-natd</field>
+    <description>Suppress: VMware hosts file read</description>
+  </rule>
+
+  <rule id="100606" level="0">
+    <if_sid>100653</if_sid>
+    <field name="audit.exe">/usr/bin/sudo</field>
+    <description>Suppress: sudo reading sudoers (normal behavior)</description>
+  </rule>
+
+  <rule id="100607" level="0">
+    <if_sid>100650</if_sid>
+    <field name="audit.exe">/var/ossec/bin/wazuh-syscheckd</field>
+    <description>Suppress: FIM scanning Wazuh cert files (normal behavior)</description>
+  </rule>
+
+
+  <rule id="100608" level="0">
+    <if_sid>100654</if_sid>
+    <field name="audit.exe"> /usr/lib/vmware/bin/vmware-vmx</field>
+    <description>Suppress: VMware hosts file read (normal behavior)</description>
+  </rule>
+
+
+
+  <rule id="100609" level="0">
+    <if_sid>100654</if_sid>
+    <field name="audit.exe">/usr/lib/vmware/bin/appLoader</field>
+    <description>Suppress: VMware hosts file read (normal behavior)</description>
+  </rule>
+
+
+
+  <!-- Wazuh internal processes reading their own files -->
+  <rule id="100610" level="0">
+    <if_sid>100650</if_sid>
+    <field name="audit.exe">/usr/share/wazuh-indexer/jdk/bin/java</field>
+    <description>Suppress: Wazuh indexer reading its own certs</description>
+  </rule>
+
+  <rule id="100611" level="0">
+    <if_sid>100650</if_sid>
+    <field name="audit.exe">/usr/share/filebeat/bin/filebeat</field>
+    <description>Suppress: Filebeat reading its own certs</description>
+  </rule>
+
+  <rule id="100612" level="0">
+    <if_sid>100650</if_sid>
+    <field name="audit.exe">/usr/bin/grep</field>
+    <description>Suppress: grep reading Wazuh config</description>
+  </rule>
+
+  <!-- Wazuh modulesd and syscheckd reading system files (FIM/SCA scanning) -->
+  <rule id="100613" level="0">
+    <if_sid>100653</if_sid>
+    <field name="audit.exe">/var/ossec/bin/wazuh-modulesd</field>
+    <description>Suppress: Wazuh modulesd reading sudoers (SCA scan)</description>
+  </rule>
+
+  <rule id="100614" level="0">
+    <if_sid>100653</if_sid>
+    <field name="audit.exe">/var/ossec/bin/wazuh-syscheckd</field>
+    <description>Suppress: FIM scanning sudoers</description>
+  </rule>
+
+  <rule id="100615" level="0">
+    <if_sid>100524</if_sid>
+    <field name="audit.exe">/var/ossec/bin/wazuh-modulesd</field>
+    <description>Suppress: Wazuh modulesd reading shadow (SCA scan)</description>
+  </rule>
+
+  <rule id="100616" level="0">
+    <if_sid>100524</if_sid>
+    <field name="audit.exe">/usr/bin/systemd-tmpfiles</field>
+    <description>Suppress: systemd-tmpfiles reading shadow</description>
+  </rule>
+
+  <rule id="100617" level="0">
+    <if_sid>100524</if_sid>
+    <field name="audit.exe">/usr/lib/systemd/systemd-userwork</field>
+    <description>Suppress: systemd-userwork reading shadow (PAM)</description>
+  </rule>
+
+  <rule id="100618" level="0">
+    <if_sid>100654</if_sid>
+    <field name="audit.exe">/var/ossec/bin/wazuh-syscheckd</field>
+    <description>Suppress: FIM scanning hosts file</description>
+  </rule>
+
+
+  <rule id="100619" level="0">
+    <if_sid>100654</if_sid>
+    <field name="audit.exe">/usr/bin/systemd-tmpfiles</field>
+    <description>Suppress: systemd-tmpfiles reading hosts</description>
+  </rule>
+
+  <!-- SDDM display manager accessing TTY (normal login behavior) -->
+  <rule id="100620" level="0">
+    <if_sid>100505</if_sid>
+    <field name="audit.exe">/usr/bin/sddm</field>
+    <description>Suppress: SDDM accessing TTY (normal login)</description>
+  </rule>
+
+  <rule id="100621" level="0">
+    <if_sid>100505</if_sid>
+    <field name="audit.exe">/usr/lib/sddm/sddm-helper</field>
+    <description>Suppress: SDDM helper accessing TTY (normal login)</description>
+  </rule>
+
+
+
+  <!-- Suppress self-monitoring duplicates from wazuh.manager agent -->
+  <rule id="100623" level="0">
+    <if_sid>100524,100650,100651,100652,100653,100654,100655</if_sid>
+    <field name="agent.name">wazuh.manager</field>
+    <description>Suppress: Duplicate alerts from wazuh.manager self-monitoring</description>
+  </rule>
+
+
+  <rule id="100624" level="0">
+    <if_sid>100524</if_sid>
+    <field name="audit.exe">/var/ossec/bin/wazuh-syscheckd</field>
+    <description>Suppress: FIM scanning shadow file</description>
+  </rule>
+
+
+  <rule id="100625" level="0">
+    <if_sid>550,553</if_sid>
+    <field name="syscheck.path">/etc/resolv.conf</field>
+    <description>Suppress: resolv.conf changes (normal DHCP/DNS behavior)</description>
+  </rule>
+
+  <rule id="100626" level="0">
+    <if_sid>100650</if_sid>
+    <field name="audit.exe">/var/ossec/bin/wazuh-modulesd</field>
+    <description>Suppress: wazuh-modulesd reading its own certs</description>
+  </rule>
+
+
+  <rule id="100627" level="4" overwrite="yes">
+    <if_sid>550</if_sid>
+    <description>Integrity checksum changed (lowered)</description>
+  </rule>
+
+  <rule id="100628" level="4" overwrite="yes">
+    <if_sid>553</if_sid>
+    <description>File deleted (lowered)</description>
+  </rule>
+
+
+</group>

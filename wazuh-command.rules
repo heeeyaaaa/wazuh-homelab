@@ -1,0 +1,101 @@
+-a exit,always -F auid=1000 -F arch=b64 -S execve -F auid!=4294967295 -k audit-wazuh-c
+-a exit,always -F auid=1000 -F arch=b32 -S execve -F auid!=4294967295 -k audit-wazuh-c
+-a exit,always -F euid=0 -F arch=b64 -S execve -F auid!=4294967295 -k audit-wazuh-c
+-a exit,always -F euid=0 -F arch=b32 -S execve -F auid!=4294967295 -k audit-wazuh-c
+
+-a always,exit -F arch=b64 -S execve -F auid!=4294967295 -F key=exec_log
+-a always,exit -F arch=b32 -S execve -F auid!=4294967295 -F key=exec_log
+-a always,exit -S execveat -F auid!=4294967295 -F key=exec_log
+
+
+# Specific keyboard event monitoring
+
+# ========================================
+# Enhanced Keylogger Detection Rules
+# ========================================
+
+# Keyboard device access (core detection)
+-a always,exit -F arch=b64 -S open -F auid!=4294967295 -F dir=/dev/input -k keyboard_access
+-a always,exit -F arch=b64 -S openat -F auid!=4294967295 -F dir=/dev/input -k keyboard_access
+-a always,exit -F arch=b32 -S open -F auid!=4294967295 -F dir=/dev/input -k keyboard_access
+-a always,exit -F arch=b32 -S openat -F auid!=4294967295 -F dir=/dev/input -k keyboard_access
+
+
+# Input monitoring tools
+-w /usr/bin/xinput -p x -k input_tool
+-w /usr/bin/xev -p x -k input_tool
+-w /usr/bin/showkey -p x -k input_tool
+-w /usr/bin/dumpkeys -p x -k input_tool
+
+# X11 access monitoring
+-w /home/heeeyaaa/.Xauthority -p r -k x11_access
+
+# TTY device access
+-w /dev/tty0 -p r -k tty_access
+
+# Input device enumeration
+-w /proc/bus/input/devices -p r -k input_enum
+
+# Browser data access (IMPORTANT: Uses syscalls, not file watches)
+
+
+
+# Persistence detection
+-w /home/heeeyaaa/.config/autostart/ -p wa -k autostart_change
+-w /etc/xdg/autostart/ -p wa -k autostart_change
+-w /home/heeeyaaa/.bashrc -p w -k bashrc_change
+-w /home/heeeyaaa/.bash_profile -p w -k bashrc_change
+-w /home/heeeyaaa/.profile -p w -k bashrc_change
+
+# Clipboard tools
+-w /usr/bin/xclip -p x -k clipboard_tool
+-w /usr/bin/xsel -p x -k clipboard_tool
+
+
+# Password file access
+-w /etc/shadow -p r -k shadow_read
+-w /etc/gshadow -p r -k shadow_read
+
+# Cron persistence
+-w /etc/crontab -p wa -k cron_changes
+-w /etc/cron.d/ -p wa -k cron_changes
+
+# Systemd persistence
+-w /etc/systemd/system/ -p wa -k systemd_service
+-w /lib/systemd/system/ -p wa -k systemd_service
+
+
+
+
+
+# Audit config tampering (attacker would disable this first)
+-w /etc/audit/rules.d/ -p wa -k audit_config_change
+-w /etc/audit/auditd.conf -p wa -k audit_config_change
+
+# Credentials in Docker compose
+-w /home/heeeyaaa/wazuh-docker-/single-node/docker-compose.yml -p rwa -k wazuh_creds_change
+
+# Wazuh indexer credentials
+-w /home/heeeyaaa/wazuh-docker/single-node/config/wazuh_indexer/internal_users.yml -p rwa -k wazuh_creds_change
+
+# SSL certificates
+-w /home/heeeyaaa/wazuh-docker/single-node/config/wazuh_indexer_ssl_certs/ -p rwa -k wazuh_creds_change
+
+# Dashboard config (contains credentials)
+-w /home/heeeyaaa/wazuh-docker/single-node/config/wazuh_dashboard/ -p rwa -k wazuh_creds_change
+
+# Cert generation configs
+-w /home/heeeyaaa/wazuh-docker/single-node/certs.yml -p rwa -k wazuh_creds_change
+
+
+
+# Source configs
+-w /home/heeeyaaa/Documents/Configs/ -p rwa -k wazuh_config_change
+
+
+# Sudo config (privilege escalation path)
+-w /etc/sudoers -p wa -k sudoers_change
+-w /etc/sudoers.d/ -p wa -k sudoers_change
+
+# Hosts file (DNS poisoning)
+-w /etc/hosts -p wa -k hosts_change

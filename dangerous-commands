@@ -1,0 +1,12 @@
+whoami:red
+su:red
+mkfs:red
+fdisk:red
+nc:red
+ncat:red
+netcat:red
+wget:orange
+curl:orange
+chmod:yellow
+chown:yellow
+usermod:yellow
