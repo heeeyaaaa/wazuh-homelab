@@ -1,0 +1,12 @@
+# ~/.config/systemd/user/screencast-watch.service
+[Unit]
+Description=Watch PipeWire for screen capture
+After=pipewire.service
+Wants=pipewire.service
+
+[Service]
+ExecStart=%h/.local/bin/screencast-watch.sh
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,15 @@
+<decoder name="screencast">
+  <prematch>screencast: </prematch>
+</decoder>
+
+<decoder name="screencast-fields">
+  <parent>screencast</parent>
+  <regex>event=(\S+) app=(\S+) host=(\S+)</regex>
+  <order>event,app,host</order>
+</decoder>
+
+<decoder name="screencast-stop">
+  <parent>screencast</parent>
+  <regex>event=(SCREENCAST_STOP) host=(\S+)</regex>
+  <order>event,host</order>
+</decoder>
