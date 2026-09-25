@@ -232,10 +232,26 @@
     <group>reverse_shell,attack,</group>
   </rule>
 
-  <rule id="100803" level="15">
+  <!-- Python net sockets / stdin dup2 are routine on their own (protonvpn, pip,
+       subprocess, pty) — kept as low-level context for 100804 to correlate. -->
+  <rule id="100803" level="3">
     <if_sid>92600</if_sid>
-    <field name="audit.key" type="pcre2">^remote_shell2?$</field>
-    <description>CRITICAL: Possible reverse shell — python made outbound connection by user $(audit.auid)</description>
+    <field name="audit.key" type="pcre2">^python_(net|revshell)$</field>
+    <description>Python network socket / stdin redirect by user $(audit.auid)</description>
+    <group>reverse_shell,</group>
+  </rule>
+
+  <!-- Revshell: same python pid opens an inet socket AND dup2()s onto stdin.
+       Benign subprocess/pty dup2s happen in a forked child with a new pid.
+       Order-independent: logcollector can deliver the dup2 before the socket. -->
+  <rule id="100804" level="15" frequency="2" timeframe="30">
+    <if_matched_sid>100803</if_matched_sid>
+    <same_field>audit.pid</same_field>
+    <different_field>audit.key</different_field>
+    <description>CRITICAL: Possible reverse shell — python redirected stdin onto a network socket by user $(audit.auid)</description>
+    <mitre>
+      <id>T1059.006</id>
+    </mitre>
     <group>reverse_shell,attack,</group>
   </rule>
 
@@ -494,25 +510,6 @@
   <rule id="100628" level="4">
     <if_sid>553</if_sid>
     <description>File deleted (lowered)</description>
-  </rule>
-
-  <rule id="100806" level="0">
-    <if_sid>100803</if_sid>
-    <match type="pcre2">70726F746F6E76706E2D617070</match>
-    <description>Suppress: protonvpn-app background connection</description>
-  </rule>
-
-  <rule id="100807" level="0">
-    <if_sid>100803</if_sid>
-    <field name="audit.command">ThreadPoolExecu</field>
-    <field name="audit.ppid">1</field>
-    <description>Suppress: protonvpn-app background connection (no proctitle on this record)</description>
-  </rule>
-
-  <rule id="100808" level="0">
-    <if_sid>100803</if_sid>
-    <match type="pcre2">70726F746F6E2E76706E2E6461656D6F6E</match>
-    <description>Suppress: proton.vpn.daemon background connection</description>
   </rule>
 
 

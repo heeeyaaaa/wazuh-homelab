@@ -76,10 +76,16 @@
 # python/python3 -> /usr/bin/python3.14 on this host (readlink -f $(command -v python3));
 # recheck after Arch bumps the python package. php/socat not installed here yet —
 # verify their real path with readlink -f before relying on these once installed.
--a always,exit -F arch=b64 -F exe=/usr/bin/python3.14 -F success=1 -S connect -k remote_shell
--a always,exit -F arch=b32 -F exe=/usr/bin/python3.14 -F success=1 -S connect -k remote_shell
--a always,exit -F arch=b64 -S socket -S connect -F exe=/usr/bin/python3.14 -k remote_shell2
--a always,exit -F arch=b32 -S socket -S connect -F exe=/usr/bin/python3.14 -k remote_shell2
+# Python: log only IPv4/IPv6 sockets (a0=2/10) — unfiltered socket/connect caught every
+# AF_UNIX/netlink call (D-Bus, resolved, protonvpn) and fired 2-4 events per request.
+-a always,exit -F arch=b64 -S socket -F a0=2 -F exe=/usr/bin/python3.14 -k python_net
+-a always,exit -F arch=b64 -S socket -F a0=10 -F exe=/usr/bin/python3.14 -k python_net
+-a always,exit -F arch=b32 -S socket -F a0=2 -F exe=/usr/bin/python3.14 -k python_net
+-a always,exit -F arch=b32 -S socket -F a0=10 -F exe=/usr/bin/python3.14 -k python_net
+# stdin (a1=0) redirected onto another fd — os.dup2(s.fileno(),0) revshell step.
+# Benign subprocess/pty children do this too; local_rules correlates with python_net by pid.
+-a always,exit -F arch=b64 -S dup2 -S dup3 -F a1=0 -F exe=/usr/bin/python3.14 -k python_revshell
+-a always,exit -F arch=b32 -S dup2 -S dup3 -F a1=0 -F exe=/usr/bin/python3.14 -k python_revshell
 
 -a always,exit -F arch=b64 -F exe=/usr/bin/perl -F success=1 -S connect -k remote_shell
 -a always,exit -F arch=b32 -F exe=/usr/bin/perl -F success=1 -S connect -k remote_shell
@@ -139,19 +145,19 @@
 -w /etc/audit/auditd.conf -p wa -k audit_config_change
 
 # Credentials in Docker compose
--w /home/heeeyaaa/wazuh-docker-4.14.3/single-node/docker-compose.yml -p rwa -k wazuh_creds_change
+-w /home/heeeyaaa/wazuh-docker/single-node/docker-compose.yml -p rwa -k wazuh_creds_change
 
 # Wazuh indexer credentials
--w /home/heeeyaaa/wazuh-docker-4.14.3/single-node/config/wazuh_indexer/internal_users.yml -p rwa -k wazuh_creds_change
+-w /home/heeeyaaa/wazuh-docker/single-node/config/wazuh_indexer/internal_users.yml -p rwa -k wazuh_creds_change
 
 # SSL certificates
--w /home/heeeyaaa/wazuh-docker-4.14.3/single-node/config/wazuh_indexer_ssl_certs/ -p rwa -k wazuh_creds_change
+-w /home/heeeyaaa/wazuh-docker/single-node/config/wazuh_indexer_ssl_certs/ -p rwa -k wazuh_creds_change
 
 # Dashboard config (contains credentials)
--w /home/heeeyaaa/wazuh-docker-4.14.3/single-node/config/wazuh_dashboard/ -p rwa -k wazuh_creds_change
+-w /home/heeeyaaa/wazuh-docker/single-node/config/wazuh_dashboard/ -p rwa -k wazuh_creds_change
 
 # Cert generation configs
--w /home/heeeyaaa/wazuh-docker-4.14.3/single-node/certs.yml -p rwa -k wazuh_creds_change
+-w /home/heeeyaaa/wazuh-docker/single-node/certs.yml -p rwa -k wazuh_creds_change
 
 
 
